@@ -107,9 +107,27 @@ exit;
 
 package RedMiner::API;
 
+# 2DO: fully implement project API
+# 2DO: fully implement issues API
+# 2DO: fully implement membership API
+
+use 5.010;
+use strict;
+use warnings;
+
 use LWP::UserAgent;
 use JSON::XS qw/encode_json decode_json/;
 use Encode   qw/decode/;
+
+=pod
+
+=encoding UTF-8
+
+=head1 RedMiner::API
+
+Wrapper package for RedMine REST API (http://www.redmine.org/projects/redmine/wiki/Rest_api).
+
+=cut
 
 sub new
 {
@@ -121,10 +139,32 @@ sub new
 		protocol => $arg{protocol} // 'http',
 		ua       => LWP::UserAgent->new,
 	};
-	$self->{protocol} = 'http' if $self->{protocol} !~ /^https?$/i;
 
 	foreach my $param (qw/host user pass key/) {
 		$self->{$param} = $arg{$param} // '';
+	}
+
+	if (length $self->{host} && $self->{host} =~ m|^(https?)://|i) {
+		$self->{protocol} = lc $1;
+		$self->{host}     =~ s/^https?://i;
+	} else {
+		$self->{protocol} = 'http' if $self->{protocol} !~ /^https?$/i;
+	}
+
+	my $auth = '';
+	if (!length $self->{key} && length $self->{user}) {
+		$auth = $self->{user};
+		if (length $self->{pass}) {
+			$auth .= ':' . $self->{pass};
+		}
+		$auth .= '@';
+	}
+	$self->{uri} = "$self->{protocol}://$auth$self->{host}";
+
+	$self->{ua}->default_header('Content-Type' => 'application/json');
+	
+	if (length $self->{key}) {
+		$self->{ua}->default_header('X-Redmine-API-Key' => $self->{key});
 	}
 
 	bless $self, $class;
@@ -150,9 +190,9 @@ sub rawContent  { $_[0]->{raw_content}  // '' }
 sub _request
 {
 	my $self   = shift;
-	my $method = uc(shift // 'GET');
-	my $path   = shift // 'issues';
-	my $data   = shift // {};
+	my $method = shift // return $self->_set_arg_error('Request method missing');
+	my $path   = shift // return $self->_set_arg_error('Request path missing');
+	my $data   = shift;
 
 	if ($method !~ /^(?:GET|POST|PUT|DELETE)$/) {
 		$method = 'GET';
@@ -160,28 +200,15 @@ sub _request
 
 	$self->_set_error;
 
-	my $auth = '';
-	if (!length $self->{key} && length $self->{user}) {
-		$auth = $self->{user};
-		if (length $self->{pass}) {
-			$auth .= ':' . $self->{pass};
-		}
-		$auth .= '@';
-	}
-
-	my $uri     = "$self->{protocol}://$auth$self->{host}/$path.json";
-	my $request = HTTP::Request->new($method, $uri);
-	if (length $self->{key}) {
-		$request->header('X-Redmine-API-Key' => $self->{key});
-	}
+	my $request = HTTP::Request->new(
+		$method, sprintf('%s/%s.json', $self->{uri}, $path)
+	);
 
 	if ($method ne 'GET' && defined $data) {
 		my $json = eval { Encode::decode('UTF-8', JSON::XS::encode_json($data)) };
 		if ($@) {
 			return $self->_set_arg_error('Malformed input data:' . $@);
 		}
-
-		$request->header('Content-Type'   => 'application/json');
 		$request->header('Content-Length' => length $json);
 		$request->content($json);
 	}
@@ -199,12 +226,13 @@ sub _response
 	$self->{raw_content}  = $response->content;
 
 	if (!$response->is_success) {
+		# FIXME: decode into error object
 		return $self->_set_error($response->status_line);
 	}
 
 	return eval {
 		JSON::XS::decode_json($response->decoded_content)
-	} //  $self->_set_error($@);
+	} // $self->_set_error($@);
 }
 
 sub createProject
@@ -216,6 +244,27 @@ sub createProject
 	);
 }
 
+# TESTME
+sub project
+{
+	my $self       = shift;
+	my $project_id = shift // return $self->_set_arg_error('Incorrect project ID');
+	$self->_response(
+		$self->_request('GET', 'projects/' . $project_id)
+	);
+}
+
+# FIXME: implement handling of limit+offset+total_count parameters
+# TESTME
+sub projects
+{
+	my $self = shift;
+	$self->_response(
+		$self->_request('GET', 'projects')
+	);
+}
+
+# Undocumented: parent_id, inherit_members
 sub updateProject
 {
 	my $self       = shift;
@@ -223,6 +272,16 @@ sub updateProject
 	my $data       = shift;
 	$self->_response(
 		$self->_request('PUT', 'projects/' . $project_id, { project => $data })
+	);
+}
+
+# TESTME
+sub deleteProject
+{
+	my $self       = shift;
+	my $project_id = shift // return $self->_set_arg_error('Incorrect project ID');
+	$self->_response(
+		$self->_request('DELETE', 'projects/' . $project_id)
 	);
 }
 
@@ -236,6 +295,8 @@ sub projectMemberships
 	);
 }
 
+# FIXME: set*, not update*
+# Setting membership for a group: group_id
 sub updateProjectMembership
 {
 	my $self       = shift;
