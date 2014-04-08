@@ -169,9 +169,12 @@ sub _request
 		$request->header('X-Redmine-API-Key' => $self->{key});
 	}
 
-	if ($method ne 'GET') {
-		my $json = eval { Encode::decode('UTF-8', JSON::XS::encode_json($data)) } // '{}';
-		# FIXME: check $@
+	if ($method ne 'GET' && defined $data) {
+		my $json = eval { Encode::decode('UTF-8', JSON::XS::encode_json($data)) };
+		if ($@) {
+			return $self->_set_arg_error('Malformed input data:' . $@);
+		}
+
 		$request->header('Content-Type'   => 'application/json');
 		$request->header('Content-Length' => length $json);
 		$request->content($json);
@@ -183,7 +186,8 @@ sub _request
 sub _response
 {
 	my $self     = shift;
-	my $response = $self->{ua}->request(shift);
+	my $request  = shift // return;
+	my $response = $self->{ua}->request($request);
 
 	$self->{raw_response} = $response->as_string;
 	$self->{raw_content}  = $response->content;
