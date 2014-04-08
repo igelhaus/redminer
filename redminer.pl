@@ -117,9 +117,11 @@ sub new
 	my %arg   = @_;
 	
 	my $self  = {
-		error => '',
-		ua    => LWP::UserAgent->new,
+		error    => '',
+		protocol => $arg{protocol} // 'http',
+		ua       => LWP::UserAgent->new,
 	};
+	$self->{protocol} = 'http' if $self->{protocol} !~ /^https?$/i;
 
 	foreach my $param (qw/host user pass key/) {
 		$self->{$param} = $arg{$param} // '';
@@ -152,6 +154,10 @@ sub _request
 	my $path   = shift // 'issues';
 	my $data   = shift // {};
 
+	if ($method !~ /^(?:GET|POST|PUT|DELETE)$/) {
+		$method = 'GET';
+	}
+
 	$self->_set_error;
 
 	my $auth = '';
@@ -163,7 +169,7 @@ sub _request
 		$auth .= '@';
 	}
 
-	my $uri     = "http://$auth$self->{host}/$path.json";
+	my $uri     = "$self->{protocol}://$auth$self->{host}/$path.json";
 	my $request = HTTP::Request->new($method, $uri);
 	if (length $self->{key}) {
 		$request->header('X-Redmine-API-Key' => $self->{key});
@@ -220,6 +226,7 @@ sub updateProject
 	);
 }
 
+# FIXME: implement handling of limit+offset+total_count parameters
 sub projectMemberships
 {
 	my $self       = shift;
