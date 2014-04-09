@@ -1,18 +1,40 @@
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl RedMiner-API.t'
-
-#########################
-
-# change 'tests => 1' to 'tests => last_test_to_print';
-
 use strict;
 use warnings;
 
 use Test::More tests => 1;
+
 BEGIN { use_ok('RedMiner::API') };
 
-#########################
+my $host = '';
+my $key  = '';
+my $key_fname = $ENV{HOME} . '/.redminer/key';
+if (-e $key_fname) {
+	open my $FH_key, '<', $key_fname;
+	my $key_data  = <$FH_key>;
+	($host, $key) = split /\s*;\s*/, $key_data;
+	chomp $key_data;
+	close $FH_key;
+}
 
-# Insert your test code below, the Test::More module is use()ed here so read
-# its man page ( perldoc Test::More ) for help writing this test script.
+my $redminer = RedMiner::API->new(
+	host => $host,
+	key  => $key,
+);
 
+my $response = $redminer->createProject({
+	identifier => 'test-ru',
+	name       => 'test.ru',
+});
+
+use JSON::XS qw/encode_json/;
+if ($response) {
+	say STDERR JSON::XS::encode_json($response);
+} else {
+	say STDERR JSON::XS::encode_json($redminer->errorDetails);
+}
+
+#SKIP: {
+#	skip 'Development tests skipped', 2 if !$ENV{REDMINER_API_DEVEL};
+#}
+
+exit;

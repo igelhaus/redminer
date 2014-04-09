@@ -1,15 +1,13 @@
 package RedMiner::API;
 
-use 5.014004;
+use 5.010;
 use strict;
 use warnings;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
-# 2DO: fully implement project API
-# 2DO: fully implement issues API
-# 2DO: fully implement membership API
-
+use URI;
+use URI::QueryParam;
 use LWP::UserAgent;
 use JSON::XS qw/encode_json decode_json/;
 use Encode   qw/decode/;
@@ -18,9 +16,23 @@ use Encode   qw/decode/;
 
 =encoding UTF-8
 
-=head1 RedMiner::API
+=head1 NAME
 
-Wrapper package for RedMine REST API (http://www.redmine.org/projects/redmine/wiki/Rest_api).
+RedMiner::API - Wrapper for RedMine REST API (http://www.redmine.org/projects/redmine/wiki/Rest_api).
+
+=head1 SYNOPSIS
+
+	use RedMiner::API;
+
+=head1 DESCRIPTION
+
+Stub documentation for RedMiner::API, created by h2xs. It looks like the
+author of the extension was negligent enough to leave the stub
+unedited.
+
+=head2 EXPORT
+
+None.
 
 =cut
 
@@ -65,44 +77,52 @@ sub new
 	bless $self, $class;
 }
 
-sub error       { $_[0]->{error} }
-sub _set_error  { $_[0]->{error} = $_[1] // ''; return; }
+sub error        { $_[0]->{error} }
+sub errorDetails { $_[0]->{error_details} }
+sub _set_error   { $_[0]->{error} = $_[1] // ''; return; }
 
-sub _set_arg_error
+sub _set_client_error
 {
 	my $self  = shift;
 	my $error = shift;
 
-	$self->{raw_response} = '';
-	$self->{raw_content}  = '';
+	$self->{error_details} = {
+		client_error => 1
+	};
 
 	return $self->_set_error($error);
 }
 
-sub rawResponse { $_[0]->{raw_response} // '' }
-sub rawContent  { $_[0]->{raw_content}  // '' }
+sub AUTOLOAD
+{
+	our $AUTOLOAD;
+	my $self   = shift;
+	my $method = substr($AUTOLOAD, length(__PACKAGE__) + 2);
+	return if $method eq 'DESTROY';
+	return $self->_response($self->_request($method, @_));
+}
 
 sub _request
 {
-	my $self   = shift;
-	my $method = shift // return $self->_set_arg_error('Request method missing');
-	my $path   = shift // return $self->_set_arg_error('Request path missing');
-	my $data   = shift;
-
-	if ($method !~ /^(?:GET|POST|PUT|DELETE)$/) {
-		$method = 'GET';
-	}
+	my $self = shift;
+	my $r    = $self->_dispatch_name(@_) // return;
 
 	$self->_set_error;
 
-	my $request = HTTP::Request->new(
-		$method, sprintf('%s/%s.json', $self->{uri}, $path)
-	);
+	my $uri = URI->new(sprintf('%s/%s.json', $self->{uri}, $r->{path}));
+	if ($r->{method} eq 'GET' && ref $r->{query} eq 'HASH') {
+		foreach my $param (keys %{ $r->{query} }) {
+			# 2DO: implement passing arrays as foo=1&foo=2&foo=3 if needed
+			$uri->query_param($param => $r->{query}{$param});
+		}
+	}
 
-	if ($method ne 'GET' && defined $data) {
-		my $json = eval { Encode::decode('UTF-8', JSON::XS::encode_json($data)) };
+	my $request = HTTP::Request->new($r->{method}, $uri);
+
+	if ($r->{method} ne 'GET' && defined $r->{content}) {
+		my $json = eval { Encode::decode('UTF-8', JSON::XS::encode_json($r->{content})) };
 		if ($@) {
-			return $self->_set_arg_error('Malformed input data:' . $@);
+			return $self->_set_client_error('Malformed input data:' . $@);
 		}
 		$request->header('Content-Length' => length $json);
 		$request->content($json);
@@ -117,11 +137,10 @@ sub _response
 	my $request  = shift // return;
 	my $response = $self->{ua}->request($request);
 
-	$self->{raw_response} = $response->as_string;
-	$self->{raw_content}  = $response->content;
-
 	if (!$response->is_success) {
-		# FIXME: decode into error object
+		$self->{error_details} = eval {
+			JSON::XS::decode_json($response->decoded_content)
+		} // {};
 		return $self->_set_error($response->status_line);
 	}
 
@@ -130,153 +149,111 @@ sub _response
 	} // $self->_set_error($@);
 }
 
-sub createProject
+sub _dispatch_name
 {
 	my $self = shift;
-	my $data = shift;
-	$self->_response(
-		$self->_request('POST', 'projects', { project => $data })
-	);
-}
+	my $name = shift // return $self->_set_client_error('Undefined method name');
+	my @args = @_;
 
-# TESTME
-sub project
-{
-	my $self       = shift;
-	my $project_id = shift // return $self->_set_arg_error('Incorrect project ID');
-	$self->_response(
-		$self->_request('GET', 'projects/' . $project_id)
-	);
-}
+	my ($action, $objects) = ($name =~ /^(get|read|create|update|delete)?(.+?)$/);
+	
+	if (!$action || $action eq 'read') {
+		$action = 'get';
+	}
+	if (!$objects) {
+		return $self->_set_client_error("Malformed method name '$name'");
+	}
 
-# FIXME: implement handling of limit+offset+total_count parameters
-# TESTME
-sub projects
-{
-	my $self = shift;
-	$self->_response(
-		$self->_request('GET', 'projects')
+	$objects   = ucfirst $objects;
+	my %METHOD = (
+		get    => 'GET'   ,
+		create => 'POST'  ,
+		update => 'PUT'   ,
+		delete => 'DELETE',
 	);
-}
 
-# Undocumented: parent_id, inherit_members
-sub updateProject
-{
-	my $self       = shift;
-	my $project_id = shift // return $self->_set_arg_error('Incorrect project ID');
-	my $data       = shift;
-	$self->_response(
-		$self->_request('PUT', 'projects/' . $project_id, { project => $data })
-	);
-}
+	my $data = {
+		method  => $METHOD{$action},
+		path    =>    '',
+		content => undef,
+		query   => undef,
+	};
 
-# TESTME
-sub deleteProject
-{
-	my $self       = shift;
-	my $project_id = shift // return $self->_set_arg_error('Incorrect project ID');
-	$self->_response(
-		$self->_request('DELETE', 'projects/' . $project_id)
-	);
-}
+	if ($action eq 'get') {
+		if (ref $args[-1] eq 'HASH') {
+			# If last argument is a hash reference, treat it as a filtering clause:
+			$data->{query} = pop @args;
+		}
+	} elsif ($action eq 'create' || $action eq 'update') {
+		# If last argument is an array/hash reference, treat it as a request body:
+		if (ref $args[-1] ne 'ARRAY' && ref $args[-1] ne 'HASH') {
+			return $self->_set_client_error(
+				'No data provided for create/update query'
+			);
+		}
+		$data->{content} = pop @args;
+	}
 
-# FIXME: implement handling of limit+offset+total_count parameters
-sub projectMemberships
-{
-	my $self       = shift;
-	my $project_id = shift // return $self->_set_arg_error('Incorrect project ID');
-	$self->_response(
-		$self->_request('GET', 'projects/' . $project_id . '/memberships')
-	);
-}
+	my $i = 0;
+	my @objects;
+	while ($objects =~ /([A-Z][a-z]+)/g) {
+		my $object   = lc $1;
+		my $category = $object;
+		
+		# If an object is singular, pluralize to make its category name: user -> users
+		if ($object !~ /s$/) {
+			$category .= 's';
+		}
+		
+		push @objects, $category;
 
-# FIXME: set*, not update*
-# Setting membership for a group: group_id
-sub updateProjectMembership
-{
-	my $self       = shift;
-	my $project_id = shift // return $self->_set_arg_error('Incorrect project ID');
-	my $data       = shift;
-	$self->_response(
-		$self->_request('POST', 'projects/' . $project_id . '/memberships', { membership => $data })
-	);
+		# We need to attach an object ID to the path if an object is singular and
+		# we either perform anything but creation or we create a new object inside
+		# another object (createProjectMembership)
+		if ($object !~ /s$/) {
+			if ($action ne 'create' || pos($objects) != length($objects)) {
+				my $object_id = $args[$i++];
+
+				return $self->_set_client_error(
+					sprintf 'Incorrect object ID for %s in query %s', $object, $name
+				) if !defined $object_id || ref \$object_id ne 'SCALAR';
+
+				push @objects, $object_id;
+			}
+			if (defined $data->{content} && pos($objects) == length($objects)) {
+				# Add wrapping object, if necessary:
+				if (!exists $data->{content}{$object}) {
+					$data->{content} = {
+						$object => $data->{content}
+					};
+				}
+			}
+		}
+	}
+	
+	$data->{path} = join '/', @objects;
+
+	return $data;
 }
 
 =head1 SEE ALSO
 
-Mention other useful documentation such as the documentation of
-related modules or operating system documentation (such as man pages
-in UNIX), or any relevant external documentation such as RFCs or
-standards.
-
-If you have a mailing list set up for your module, mention it here.
-
-If you have a web site set up for your module, mention it here.
+RedMine::API: http://search.cpan.org/~celogeek/Redmine-API-0.04/
 
 =head1 AUTHOR
 
-Anton Soldatov, E<lt>anton@localE<gt>
+Anton Soldatov, E<lt>igelhaus@gmail.comE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
 Copyright (C) 2014 by Anton Soldatov
 
 This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.14.4 or,
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
 at your option, any later version of Perl 5 you may have available.
-
 
 =cut
 
 1;
 
 __END__
-
-=head1 NAME
-
-RedMiner::API - Perl extension for blah blah blah
-
-=head1 SYNOPSIS
-
-  use RedMiner::API;
-  blah blah blah
-
-=head1 DESCRIPTION
-
-Stub documentation for RedMiner::API, created by h2xs. It looks like the
-author of the extension was negligent enough to leave the stub
-unedited.
-
-Blah blah blah.
-
-=head2 EXPORT
-
-None by default.
-
-
-
-=head1 SEE ALSO
-
-Mention other useful documentation such as the documentation of
-related modules or operating system documentation (such as man pages
-in UNIX), or any relevant external documentation such as RFCs or
-standards.
-
-If you have a mailing list set up for your module, mention it here.
-
-If you have a web site set up for your module, mention it here.
-
-=head1 AUTHOR
-
-Anton Soldatov, E<lt>anton@localE<gt>
-
-=head1 COPYRIGHT AND LICENSE
-
-Copyright (C) 2014 by Anton Soldatov
-
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.14.4 or,
-at your option, any later version of Perl 5 you may have available.
-
-
-=cut

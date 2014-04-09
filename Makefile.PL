@@ -1,12 +1,18 @@
-use 5.014004;
+use 5.010;
 use ExtUtils::MakeMaker;
-# See lib/ExtUtils/MakeMaker.pm for details of how to influence
-# the contents of the Makefile that is written.
+
 WriteMakefile(
-    NAME              => 'RedMiner::API',
-    VERSION_FROM      => 'lib/RedMiner/API.pm', # finds $VERSION
-    PREREQ_PM         => {}, # e.g., Module::Name => 1.1
-    ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
-      (ABSTRACT_FROM  => 'lib/RedMiner/API.pm', # retrieve abstract from module
-       AUTHOR         => 'Anton Soldatov <anton@local>') : ()),
+	NAME         => 'RedMiner::API',
+	VERSION_FROM => 'lib/RedMiner/API.pm',
+	PREREQ_PM    => {
+		'Encode'          => 0,
+		'URI'             => 0,
+		'URI::QueryParam' => 0,
+		'LWP::UserAgent'  => 0,
+		'JSON::XS'        => 0,
+	},
+	($] >= 5.005 ? ( ## Add these new keywords supported since 5.005
+		ABSTRACT_FROM => 'lib/RedMiner/API.pm',
+		AUTHOR        => 'Anton Soldatov <igelhaus@gmail.com>')
+	: ()),
 );
