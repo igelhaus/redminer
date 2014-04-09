@@ -27,7 +27,12 @@ if (!$conf) {
 }
 
 if (!$project_id) {
-	die 'Invalid --id parameter';
+	if ($project_name =~ /^[a-z.\-]+$/i) {
+		$project_id = $project_name;
+		$project_id =~ s/\./-/g;
+	} else {
+		die 'Invalid --id parameter';
+	}
 }
 
 my $layout = Config::IniFiles->new( -file => $layout_fname );
