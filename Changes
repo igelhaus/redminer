@@ -1,0 +1,6 @@
+Revision history for Perl extension RedMiner::API.
+
+0.01  Wed Apr  9 07:44:27 2014
+	- original version; created by h2xs 1.23 with options
+		-X RedMiner::API
+
