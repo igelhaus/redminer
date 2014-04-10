@@ -6,6 +6,9 @@ use warnings;
 
 our $VERSION = '0.03';
 
+# 2DO: http://www.redmine.org/projects/redmine/wiki/Rest_api#User-Impersonation
+# 2DO: implement (un)?wrapping
+
 use URI;
 use URI::QueryParam;
 use LWP::UserAgent;
@@ -23,16 +26,145 @@ RedMiner::API - Wrapper for RedMine REST API (http://www.redmine.org/projects/re
 =head1 SYNOPSIS
 
 	use RedMiner::API;
+	my $redminer = RedMiner::API->new(
+		host => 'example.com/redmine',
+		key  => 'xxx',
+	);
+	# password-based auth is also supported:
+	#my $redminer = RedMiner::API->new(
+	#	host => 'example.com/redmine',
+	#	user => 'redminer',
+	#	pass => 'p@s$w0rD',
+	#);
+
+	my $project = $redminer->createProject({
+		identifier  => 'my-project',
+		name        => 'My Project',
+		description => 'My project, created with *RedMiner::API*',
+	});
+	if (!$project) {
+		say STDERR 'Error(s) creating project: ', join("\n", map { $_ } $redminer->errorDetails->{errors});
+		exit 1;
+	}
+	my $project_id = $project->{project}{id};
+
+	$redminer->updateProject($project_id, {
+		parent_id       => 42, # Make a project with numeric ID 42  parent for $project_id
+		inherit_members => 1,  # Inherit all members and their permissions from the parent
+	});
+	
+	my $issue = $redminer->createIssue({
+		project_id  => $project_id,
+		subject     => 'Test issue for RedMiner::API',
+		description => 'Issue description',
+	});
+
+	$redminer->deleteProject($project_id);
 
 =head1 DESCRIPTION
 
-Stub documentation for RedMiner::API, created by h2xs. It looks like the
-author of the extension was negligent enough to leave the stub
-unedited.
+This module provides a thin client for RedMine REST API. Please note that although
+RedMine API is designed to support both JSON and XML, this module is B<JSON only>.
 
-=head2 EXPORT
+=head1 METHODS NAMING AND OTHER CALL CONVENTIONS
 
-None.
+All methods are dynamically converted to actual HTTP requests using following conventions.
+
+=head2 Getting a Collection of Objects
+
+	$redminer->projects;     # ->users,     ->issues,     ->timeEntries     ...
+	$redminer->getProjects;  # ->getUsers,  ->getIssues,  ->getTimeEntries  ...
+	$redminer->readProjects; # ->readUsers, ->readIssues, ->readTimeEntries ...
+	
+	# Second page when displaying 10 items per page:
+	$redminer->projects({ offset => 9, limit => 10 });
+
+	# Filtering issues:
+	$redminer->issues({ project_id => 42, assigned_to_id => 'me' });
+
+=head2 Getting an Object
+
+	$redminer->project(1);     # ->user(1),      ->issue(1),     ->timeEntry(1)     ...
+	$redminer->getProject(1);  # ->getUser(1),   ->getIssue(1),  ->getTimeEntry(1)  ...
+	$redminer->readProject(1); # ->readUsers(1), ->readIssue(1), ->readTimeEntry(1) ...
+	
+	# Showing anobject with additional metadata:
+	$redminer->issue(1, { include => 'relations,changesets' });
+
+=head2 Creating an Object
+
+	$redminer->createProject({
+		# ...
+	}); # ->createUser, ->createIssue, ->createTimeEntry ...
+
+=head2 Updating an Object
+
+	$redminer->updateProject(1, {
+		# ...
+	}); # ->updateUser(...), ->updateIssue(...), ->updateTimeEntry(...) ...
+
+=head2 Deleting an Object
+
+	$redminer->deleteProject(1); # ->deleteUser(1), ->deleteIssue(1), ->deleteTimeEntry(1) ...
+
+=head2 Objects Belonging to Other Objects
+
+	# Example for project membership(s)
+	my $project_id    = 42;
+	my $membership_id = 42;
+
+	# Listing *project* memberships and creating a membership within a *project*
+	# require identifying a project and thus have to be spelled like this:
+	$redminer->projectMemberships($project_id, { limit => 50 });
+	$redminer->createProjectMembership($project_id, { ... });
+
+	# Viewing/Updating/Deleting a membership is performed directly by its ID, thus:
+	my $membership = $redminer->membership($membership_id);
+	$redminer->updateMembership($membership_id, { ... });
+	$redminer->deleteMembership($membership_id);
+
+=head2 Complex Object Names
+
+Such complex names as C<TimeEntry> which should be dispatched to C<time_entries>
+are recognized and thus can be spelled in a natural language way (see examples above).
+If this is not the case, please report bugs.
+
+=head2 Return Values
+
+All successfull calls return hash references. For C<update*> and C<delete*> calls
+hash references are empty.
+
+If a call fails, C<undef> is returned. In this case detailed error information can
+be retrieved like this:
+	
+	if (!$redminer->deleteIssue(42)) {
+		my $details = $redminer->errorDetails;
+		# Process $details here...
+	}
+
+=head1 METHODS
+
+=head2 new
+
+	my $redminer = RedMiner::API->new(%options);
+
+Following options are recognized:
+
+=over
+
+=item *
+
+B<host>: RedMine host. Beside host name, may include port, path and/or URL scheme (C<http> is used by default).
+
+=item *
+
+B<key>: API key. For additional information, please refer to http://www.redmine.org/projects/redmine/wiki/Rest_api#Authentication
+
+=item *
+
+B<user>, B<pass>: User name and password for password-based authentication
+
+=back
 
 =cut
 
@@ -77,8 +209,34 @@ sub new
 	bless $self, $class;
 }
 
+=head2 error
+
+Error during the last call. This is an empty string for successfull calls, otherwise
+it contains an HTTP status line.
+
+If the call failed before sending an actual request (e.g. method name could not
+be dispatched into an HTTP request), contains description of the client error.
+
+=cut
+
 sub error        { $_[0]->{error} }
+
+=head2 errorDetails
+
+Contains detailed error messages from the last call. This is an empty hash reference
+for successfull calls, otherwise please see http://www.redmine.org/projects/redmine/wiki/Rest_api#Validation-errors.
+
+If the call failed before sending an actual request (e.g. method name could not
+be dispatched into an HTTP request), return value is
+
+	{
+		client_error => 1
+	}
+
+=cut
+
 sub errorDetails { $_[0]->{error_details} }
+
 sub _set_error   { $_[0]->{error} = $_[1] // ''; return; }
 
 sub _set_client_error
@@ -143,6 +301,8 @@ sub _response
 		} // {};
 		return $self->_set_error($response->status_line);
 	}
+
+	$self->{error_details} = {};
 
 	if ($request->method eq 'PUT' || $request->method eq 'DELETE') {
 		return {};
