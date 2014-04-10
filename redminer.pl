@@ -7,6 +7,7 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin/lib";
 
+use Encode qw/encode/;
 use Getopt::Long;
 use Config::IniFiles;
 
@@ -51,11 +52,24 @@ my $redminer = RedMiner::API->new(
 );
 
 my $description = $layout? $layout->val('project', 'description') // '' : '';
+
+say 'Creating a new project ' . $project_name;
+
 my $project = $redminer->createProject({
 	identifier  => $project_id  ,
 	name        => $project_name,
 	description => $description ,
 });
+
+if (!$project) {
+	say STDERR 'Project was not created';
+	say STDERR render_errors($redminer->errorDetails);
+	exit 255;
+}
+
+my $pid = $project->{project}{id};
+say 'Project created with ID ' . $pid;
+
 $redminer->updateProject($project->{project}{id}, {
 	inherit_members => 1,
 });
@@ -69,18 +83,30 @@ if ($layout) {
 			name        => $project_name  . ': ' . ($layout->val($section, 'name_suffix') // 'Subproject'),
 			description => $layout->val($section, 'description') // '',
 		};
+
+		say 'Creating a new subproject ' . $subproject_data->{name};
+
 		my $subproject = $redminer->createProject($subproject_data);
+		if (!$subproject) {
+			say STDERR 'Subproject was not created';
+			say STDERR render_errors($redminer->errorDetails);
+			next;
+		}
+
+		say 'Subproject created with ID ' . $subproject->{project}{id};
 		$redminer->updateProject($subproject->{project}{id}, {
-			parent_id       => $project->{project}{id},
+			parent_id       => $pid,
 			inherit_members => 1,
 		});
 	}
 }
 
+# FIXME: handle limit/offset issue
 my $perm_source = $layout? $layout->val('project', 'perm_source') : 0;
 if ($perm_source) {
 	my $memberships = $redminer->projectMemberships($perm_source);
 	if ($memberships) {
+		say 'Copying project permissions from a template project...';
 		foreach my $membership (@{ $memberships->{memberships} }) {
 			my $type = '';
 			if (exists $membership->{group}) {
@@ -98,14 +124,24 @@ if ($perm_source) {
 				next if $role->{inherited};
 				push @{ $new_membership->{role_ids} }, $role->{id};
 			}
-
 			if ($new_membership->{user_id} && @{ $new_membership->{role_ids} }) {
-				$redminer->createProjectMembership(
-					$project->{project}{id}, $new_membership
-				);
+				$redminer->createProjectMembership($pid, $new_membership);
 			}
 		}
+		say 'Permissions copied';
 	}
 }
 
+say 'Bye';
 exit;
+
+sub render_errors
+{
+	my $errors = shift;
+	if (ref $errors ne 'HASH' && ref $errors->{errors} ne 'ARRAY') {
+		return 'Unknown server errors';
+	}
+	return join "\n", 'Following error(s) reported:', map {
+		"\t* " . Encode::encode('UTF-8', $_)
+	} @{ $errors->{errors} };
+}
