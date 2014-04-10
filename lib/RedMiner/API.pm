@@ -454,7 +454,7 @@ sub _normalize_objects
 	my $objects = shift;
 
 	$objects = ucfirst $objects;
-	# These are token that for a *single* entry in the resulting request path,
+	# These are tokens that form a *single* entry in the resulting request path,
 	# e.g.: PUT /time_entries/1.json
 	# But it is natural to spell them like this:
 	# $api->updateTimeEntry(1, { ... });
@@ -479,7 +479,7 @@ sub _object
 	return $object;
 }
 
-# If an object is singular, pluralize to make its category name: user -> users
+# If an object is singular, pluralize it to make its category name: user -> users
 sub _category
 {
 	my $self   = shift;
@@ -518,8 +518,10 @@ depends directly on LWP::UserAgent and URI.
 B<Call conventions>. Although both modules use dynamic dispatching for building actual HTTP
 requests, they do it in a different manner. In particular, RedMiner::API tries to
 dispatch a single method name without using chains of interrim objects as Redmine::API does.
-	
+
 =back
+
+Fork this project on GitHub: https://github.com/igelhaus/redminer
 
 =head1 AUTHOR
 
