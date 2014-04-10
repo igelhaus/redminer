@@ -6,7 +6,6 @@ use warnings;
 
 our $VERSION = '0.03';
 
-# 2DO: http://www.redmine.org/projects/redmine/wiki/Rest_api#User-Impersonation
 # 2DO: implement (un)?wrapping
 
 use URI;
@@ -158,11 +157,15 @@ B<host>: RedMine host. Beside host name, may include port, path and/or URL schem
 
 =item *
 
-B<key>: API key. For additional information, please refer to http://www.redmine.org/projects/redmine/wiki/Rest_api#Authentication
+B<key>: API key. For details, please refer to http://www.redmine.org/projects/redmine/wiki/Rest_api#Authentication
 
 =item *
 
 B<user>, B<pass>: User name and password for password-based authentication
+
+=item *
+
+B<work_as>: User login for impersonation. For details, please refer to http://www.redmine.org/projects/redmine/wiki/Rest_api#User-Impersonation.
 
 =back
 
@@ -179,7 +182,7 @@ sub new
 		ua       => LWP::UserAgent->new,
 	};
 
-	foreach my $param (qw/host user pass key/) {
+	foreach my $param (qw/host user pass key work_as/) {
 		$self->{$param} = $arg{$param} // '';
 	}
 
@@ -204,6 +207,9 @@ sub new
 	
 	if (length $self->{key}) {
 		$self->{ua}->default_header('X-Redmine-API-Key' => $self->{key});
+	}
+	if (length $self->{work_as}) {
+		$self->{ua}->default_header('X-Redmine-Switch-User' => $self->{work_as});
 	}
 
 	bless $self, $class;
