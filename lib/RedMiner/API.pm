@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use URI;
 use URI::QueryParam;
@@ -155,7 +155,7 @@ sub _dispatch_name
 	my $name = shift // return $self->_set_client_error('Undefined method name');
 	my @args = @_;
 
-	my ($action, $objects) = ($name =~ /^(get|read|create|update|delete)?(.+?)$/);
+	my ($action, $objects) = ($name =~ /^(get|read|create|update|delete)?([A-Za-z]+?)$/);
 	
 	if (!$action || $action eq 'read') {
 		$action = 'get';
@@ -164,7 +164,6 @@ sub _dispatch_name
 		return $self->_set_client_error("Malformed method name '$name'");
 	}
 
-	$objects   = ucfirst $objects;
 	my %METHOD = (
 		get    => 'GET'   ,
 		create => 'POST'  ,
@@ -188,45 +187,43 @@ sub _dispatch_name
 		# If last argument is an array/hash reference, treat it as a request body:
 		if (ref $args[-1] ne 'ARRAY' && ref $args[-1] ne 'HASH') {
 			return $self->_set_client_error(
-				'No data provided for create/update query'
+				'No data provided for a create/update method'
 			);
 		}
 		$data->{content} = pop @args;
 	}
 
+	$objects = $self->_normalize_objects($objects);
+
 	my $i = 0;
 	my @objects;
 	while ($objects =~ /([A-Z][a-z]+)/g) {
-		my $object   = lc $1;
-		my $category = $object;
-		
-		# If an object is singular, pluralize to make its category name: user -> users
-		if ($object !~ /s$/) {
-			$category .= 's';
-		}
+		my $object   = $self->_object($1);
+		my $category = $self->_category($object);
 		
 		push @objects, $category;
+
+		next if $object eq $category;
 
 		# We need to attach an object ID to the path if an object is singular and
 		# we either perform anything but creation or we create a new object inside
 		# another object (createProjectMembership)
-		if ($object !~ /s$/) {
-			if ($action ne 'create' || pos($objects) != length($objects)) {
-				my $object_id = $args[$i++];
+		if ($action ne 'create' || pos($objects) != length($objects)) {
+			my $object_id = $args[$i++];
 
-				return $self->_set_client_error(
-					sprintf 'Incorrect object ID for %s in query %s', $object, $name
-				) if !defined $object_id || ref \$object_id ne 'SCALAR';
+			return $self->_set_client_error(
+				sprintf 'Incorrect object ID for %s in query %s', $object, $name
+			) if !defined $object_id || ref \$object_id ne 'SCALAR';
 
-				push @objects, $object_id;
-			}
-			if (defined $data->{content} && pos($objects) == length($objects)) {
-				# Add wrapping object, if necessary:
-				if (!exists $data->{content}{$object}) {
-					$data->{content} = {
-						$object => $data->{content}
-					};
-				}
+			push @objects, $object_id;
+		}
+
+		# Add wrapping object, if necessary:
+		if (defined $data->{content} && pos($objects) == length($objects)) {
+			if (!exists $data->{content}{$object}) {
+				$data->{content} = {
+					$object => $data->{content}
+				};
 			}
 		}
 	}
@@ -234,6 +231,58 @@ sub _dispatch_name
 	$data->{path} = join '/', @objects;
 
 	return $data;
+}
+
+sub _normalize_objects
+{
+	my $self    = shift;
+	my $objects = shift;
+
+	$objects = ucfirst $objects;
+	# These are token that for a *single* entry in the resulting request path,
+	# e.g.: PUT /time_entries/1.json
+	# But it is natural to spell them like this:
+	# $api->updateTimeEntry(1, { ... });
+	$objects =~ s/TimeEntr/Timeentr/g;
+	$objects =~ s/IssueCategor/Issuecategor/g;
+	$objects =~ s/IssueStatus/Issuestatus/g;
+	$objects =~ s/CustomField/Customfield/g;
+
+	return $objects;
+}
+
+sub _object
+{
+	my $self   = shift;
+	my $object = lc(shift);
+	
+	# Process compound words:
+	$object =~ s/timeentr/time_entr/ig;
+	$object =~ s/issue(categor|status)/issue_$1/ig;
+	$object =~ s/customfield/custom_field/ig;
+	
+	return $object;
+}
+
+# If an object is singular, pluralize to make its category name: user -> users
+sub _category
+{
+	my $self   = shift;
+	my $object = shift;
+
+	my $category = $object;
+
+	if ($category !~ /s$/ || $category =~ /us$/) {
+		if ($object =~ /y$/) {
+			$category =~ s/y$/ies/;
+		} elsif ($category =~ /us$/) {
+			$category .= 'es';
+		} else {
+			$category .= 's';
+		}
+	}
+
+	return $category;
 }
 
 =head1 SEE ALSO

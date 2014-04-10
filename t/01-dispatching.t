@@ -1,12 +1,12 @@
 use strict;
 use warnings;
 
-use Test::More;
+use Test::More tests => 30;
 
 BEGIN { use_ok('RedMiner::API') };
 
 #
-# Tests for internal dispatching mechanizm
+# Tests for internal name dispatching
 #
 
 my $redminer = RedMiner::API->new(
@@ -154,6 +154,84 @@ is_deeply($r, {
 	query   => undef,
 }, 'createProjectMembership');
 
-done_testing;
+$r = $redminer->_dispatch_name('createIssueWatcher', 1, { user_id => 1 });
+is_deeply($r, {
+	method => 'POST',
+	path   => 'issues/1/watchers',
+	content => { watcher => { user_id => 1 } },
+	query   => undef,
+}, 'createIssueWatcher');
+
+$r = $redminer->_dispatch_name('deleteIssueWatcher', 1, 42);
+is_deeply($r, {
+	method => 'DELETE',
+	path   => 'issues/1/watchers/42',
+	content => undef,
+	query   => undef,
+}, 'deleteIssueWatcher');
+
+#
+# Dispatching methods with compound object names
+#
+
+$r = $redminer->_dispatch_name('timeEntries', { limit => 10, offset => 9 });
+is_deeply($r, {
+	method => 'GET',
+	path   => 'time_entries',
+	content => undef,
+	query   => { limit => 10, offset => 9 },
+}, 'timeEntries');
+
+$r = $redminer->_dispatch_name('timeEntry', 1);
+is_deeply($r, {
+	method => 'GET',
+	path   => 'time_entries/1',
+	content => undef,
+	query   => undef,
+}, 'timeEntry');
+
+$r = $redminer->_dispatch_name('createTimeEntry', { issue_id => 42, hours => 1 });
+is_deeply($r, {
+	method => 'POST',
+	path   => 'time_entries',
+	content => { time_entry => { issue_id => 42, hours => 1 } },
+	query   => undef,
+}, 'createTimeEntry');
+
+$r = $redminer->_dispatch_name('updateTimeEntry', 1, { issue_id => 42, hours => 1 });
+is_deeply($r, {
+	method => 'PUT',
+	path   => 'time_entries/1',
+	content => { time_entry => { issue_id => 42, hours => 1 } },
+	query   => undef,
+}, 'updateTimeEntry');
+
+$r = $redminer->_dispatch_name('deleteTimeEntry', 1);
+is_deeply($r, {
+	method => 'DELETE',
+	path   => 'time_entries/1',
+	content => undef,
+	query   => undef,
+}, 'deleteTimeEntry');
+
+#
+# Dispatching methods with more than 1 identifying object *and* compound object names:
+#
+
+$r = $redminer->_dispatch_name('projectIssueCategories', 1, { limit => 10, offset => 9 });
+is_deeply($r, {
+	method => 'GET',
+	path   => 'projects/1/issue_categories',
+	content => undef,
+	query   => { limit => 10, offset => 9 },
+}, 'projectIssueCategories');
+
+$r = $redminer->_dispatch_name('createProjectIssueCategory', 1, { name => 'My Category', assign_to_id => 1 });
+is_deeply($r, {
+	method => 'POST',
+	path   => 'projects/1/issue_categories',
+	content => { issue_category => { name => 'My Category', assign_to_id => 1 } },
+	query   => undef,
+}, 'projectIssueCategories');
 
 exit;
