@@ -45,10 +45,12 @@ if (!$layout) {
 }
 
 my $redminer = RedMiner::API->new(
-	host => $conf->val('redmine', 'host') // '',
-	user => $conf->val('redmine', 'user') // '',
-	pass => $conf->val('redmine', 'pass') // '',
-	key  => $conf->val('redmine',  'key') // '',
+	host              => $conf->val('redmine', 'host') // '',
+	user              => $conf->val('redmine', 'user') // '',
+	pass              => $conf->val('redmine', 'pass') // '',
+	key               => $conf->val('redmine',  'key') // '',
+	work_as           => $conf->val('redmine',  'work_as') // '',
+	no_wrapper_object => 1,
 );
 
 my $description = $layout? $layout->val('project', 'description') // '' : '';
@@ -67,10 +69,10 @@ if (!$project) {
 	exit 255;
 }
 
-my $pid = $project->{project}{id};
+my $pid = $project->{id};
 say 'Project created with ID ' . $pid;
 
-$redminer->updateProject($project->{project}{id}, {
+$redminer->updateProject($pid, {
 	inherit_members => 1,
 });
 
@@ -93,8 +95,8 @@ if ($layout) {
 			next;
 		}
 
-		say 'Subproject created with ID ' . $subproject->{project}{id};
-		$redminer->updateProject($subproject->{project}{id}, {
+		say 'Subproject created with ID ' . $subproject->{id};
+		$redminer->updateProject($subproject->{id}, {
 			parent_id       => $pid,
 			inherit_members => 1,
 		});

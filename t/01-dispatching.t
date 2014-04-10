@@ -109,7 +109,7 @@ is_deeply($r, {
 	query   => undef,
 }, 'project');
 
-$r = $redminer->_dispatch_name('createProject', { name => 'My Project' });
+$r = $redminer->_dispatch_name('createProject', { project => { name => 'My Project' } });
 is_deeply($r, {
 	method => 'POST',
 	path   => 'projects',
@@ -117,7 +117,7 @@ is_deeply($r, {
 	query   => undef,
 }, 'createProject');
 
-$r = $redminer->_dispatch_name('updateProject', 1, { name => 'My Project' });
+$r = $redminer->_dispatch_name('updateProject', 1, { project => { name => 'My Project' } });
 is_deeply($r, {
 	method => 'PUT',
 	path   => 'projects/1',
@@ -145,7 +145,7 @@ is_deeply($r, {
 	query   => { limit => 10, offset => 9 },
 }, 'projectMemberships');
 
-$r = $redminer->_dispatch_name('createProjectMembership', 1, { user_id => 1, role_ids => [ 1 ] });
+$r = $redminer->_dispatch_name('createProjectMembership', 1, { membership => { user_id => 1, role_ids => [ 1 ] } });
 is_deeply($r, {
 	method => 'POST',
 	path   => 'projects/1/memberships',
@@ -153,7 +153,7 @@ is_deeply($r, {
 	query   => undef,
 }, 'createProjectMembership');
 
-$r = $redminer->_dispatch_name('createIssueWatcher', 1, { user_id => 1 });
+$r = $redminer->_dispatch_name('createIssueWatcher', 1, { watcher => { user_id => 1 } });
 is_deeply($r, {
 	method => 'POST',
 	path   => 'issues/1/watchers',
@@ -189,7 +189,7 @@ is_deeply($r, {
 	query   => undef,
 }, 'timeEntry');
 
-$r = $redminer->_dispatch_name('createTimeEntry', { issue_id => 42, hours => 1 });
+$r = $redminer->_dispatch_name('createTimeEntry', { time_entry => { issue_id => 42, hours => 1 } });
 is_deeply($r, {
 	method => 'POST',
 	path   => 'time_entries',
@@ -197,7 +197,7 @@ is_deeply($r, {
 	query   => undef,
 }, 'createTimeEntry');
 
-$r = $redminer->_dispatch_name('updateTimeEntry', 1, { issue_id => 42, hours => 1 });
+$r = $redminer->_dispatch_name('updateTimeEntry', 1, { time_entry => { issue_id => 42, hours => 1 } });
 is_deeply($r, {
 	method => 'PUT',
 	path   => 'time_entries/1',
@@ -225,7 +225,7 @@ is_deeply($r, {
 	query   => { limit => 10, offset => 9 },
 }, 'projectIssueCategories');
 
-$r = $redminer->_dispatch_name('createProjectIssueCategory', 1, { name => 'My Category', assign_to_id => 1 });
+$r = $redminer->_dispatch_name('createProjectIssueCategory', 1, { issue_category => { name => 'My Category', assign_to_id => 1 } });
 is_deeply($r, {
 	method => 'POST',
 	path   => 'projects/1/issue_categories',

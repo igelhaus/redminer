@@ -32,28 +32,29 @@ close $FH_key;
 my $redminer = RedMiner::API->new(
 	host => $host,
 	key  => $key,
+	no_wrapper_object => 1,
 );
 
-my $project = $redminer->createProject({ project => {
+my $project = $redminer->createProject({
 	identifier => 'redminer-api-test',
 	name       => 'RedMiner API test',
-}});
-my $project_id = $project->{project}{id};
+});
+my $project_id = $project->{id};
 ok(defined $project_id, 'New project created with internal ID ' . $project_id);
 
-ok(!defined $redminer->createProject({ project => {
+ok(!defined $redminer->createProject({
 	identifier => 'redminer-api-test',
 	name       => 'RedMiner API test',
-}}), 'Project already exists, error object is ' . JSON::XS::encode_json($redminer->errorDetails));
+}), 'Project already exists, error object is ' . JSON::XS::encode_json($redminer->errorDetails));
 
-ok($redminer->updateProject($project_id, { project => { inherit_members => 1 } }), 'Project updated');
+ok($redminer->updateProject($project_id, { inherit_members => 1 }), 'Project updated');
 
-my $issue = $redminer->createIssue({ issue => {
+my $issue = $redminer->createIssue({
 	project_id  => $project_id,
 	subject     => 'Test issue for RedMiner::API',
 	description => 'Test description',
-}});
-ok(defined $issue->{issue}{id}, 'Issue created with ID #' . $issue->{issue}{id});
+});
+ok(defined $issue->{id}, 'Issue created with ID #' . $issue->{id});
 
 ok($redminer->deleteProject($project_id), 'Project deleted');
 

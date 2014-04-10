@@ -4,9 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 
-our $VERSION = '0.03';
-
-# 2DO: implement (un)?wrapping
+our $VERSION = '0.04';
 
 use URI;
 use URI::QueryParam;
@@ -169,7 +167,41 @@ B<user>, B<pass>: User name and password for password-based authentication
 
 B<work_as>: User login for impersonation. For details, please refer to http://www.redmine.org/projects/redmine/wiki/Rest_api#User-Impersonation.
 
+=item *
+
+B<no_wrapper_object>: Automatically add/remove wrapper object for data. See below.
+
 =back
+
+=head3 no_wrapper_object
+
+By default RedMine API requires you to wrap you object data like this:
+
+	my $project = $redminer->createProject({
+		project => {
+			identifier => 'some-id',
+			name       => 'Some Name',
+		}
+	});
+	# $project contains something like
+	# { project => { id => 42, identifier => 'some-id', name => 'Some Name' ... } }
+
+By default this module follows this convention. However, if you specify something like
+
+	my $redminer = RedMiner::API->new(
+		host => 'example.com/redmine',
+		key => 'xxx',
+		no_wrapper_object => 1,
+	);
+
+you can skip "wrapping" object data like this:
+
+	my $project = $redminer->createProject({
+		identifier => 'some-id',
+		name       => 'Some Name',
+	});
+	# $project contains something like
+	# { id => 42, identifier => 'some-id', name => 'Some Name' ... }
 
 =cut
 
@@ -184,7 +216,7 @@ sub new
 		ua       => LWP::UserAgent->new,
 	};
 
-	foreach my $param (qw/host user pass key work_as/) {
+	foreach my $param (qw/host user pass key work_as no_wrapper_object/) {
 		$self->{$param} = $arg{$param} // '';
 	}
 
@@ -321,6 +353,10 @@ sub _response
 		return $self->_set_error($@);
 	}
 
+	if ($self->{expect_single_object} && $self->{no_wrapper_object}) {
+		$content = delete $content->{$self->{expect_single_object}};
+	}
+
 	return $content;
 }
 
@@ -369,6 +405,7 @@ sub _dispatch_name
 	}
 
 	$objects = $self->_normalize_objects($objects);
+	delete $self->{expect_single_object};
 
 	my $i = 0;
 	my @objects;
@@ -393,9 +430,12 @@ sub _dispatch_name
 			push @objects, $object_id;
 		}
 
-		# Add wrapping object, if necessary:
-		if (defined $data->{content} && pos($objects) == length($objects)) {
-			if (!exists $data->{content}{$object}) {
+		if (pos($objects) == length($objects)) { # Last object in the chain:
+			if ($action eq 'get' || $action eq 'create') {
+				$self->{expect_single_object} = $object;
+			}
+			if (defined $data->{content} && $self->{no_wrapper_object}) {
+				# Automatically wrap object data, otherwise we pass everything as is:
 				$data->{content} = {
 					$object => $data->{content}
 				};
