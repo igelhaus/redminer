@@ -12,18 +12,16 @@ use Config::IniFiles;
 
 use RedMiner::API;
 
-my $conf_fname   = 'redminer.conf';
-my $layout_fname = 'layout.conf';
+my $conf_fname   = $ENV{HOME} . '/.redminer/redminer.conf';
+my $layout_fname = $ENV{HOME} . '/.redminer/default-layout.conf';
 my $project_id   = '';
 my $project_name = 'ClientName.domain';
-my $perm_source  =  0; 
 
 GetOptions(
-	'conf=s'        => \$conf_fname,
-	'layout=s'      => \$layout_fname,
-	'id=s'          => \$project_id,
-	'name=s'        => \$project_name,
-	'perm-source=s' => \$perm_source,
+	'conf=s'   => \$conf_fname,
+	'layout=s' => \$layout_fname,
+	'id=s'     => \$project_id,
+	'name=s'   => \$project_name,
 );
 
 my $conf = Config::IniFiles->new( -file => $conf_fname );
@@ -79,6 +77,7 @@ if ($layout) {
 	}
 }
 
+my $perm_source = $layout? $layout->val('project', 'perm_source') : 0;
 if ($perm_source) {
 	my $memberships = $redminer->projectMemberships($perm_source);
 	if ($memberships) {
