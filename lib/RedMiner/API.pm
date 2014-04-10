@@ -108,7 +108,9 @@ All methods are dynamically converted to actual HTTP requests using following co
 
 =head2 Objects Belonging to Other Objects
 
+	#
 	# Example for project membership(s)
+	#
 	my $project_id    = 42;
 	my $membership_id = 42;
 
@@ -314,9 +316,12 @@ sub _response
 		return {};
 	}
 
-	return eval {
-		JSON::XS::decode_json($response->decoded_content)
-	} // $self->_set_error($@);
+	my $content = eval { JSON::XS::decode_json($response->decoded_content) };
+	if ($@) {
+		return $self->_set_error($@);
+	}
+
+	return $content;
 }
 
 sub _dispatch_name
@@ -457,7 +462,24 @@ sub _category
 
 =head1 SEE ALSO
 
-RedMine::API: http://search.cpan.org/~celogeek/Redmine-API-0.04/
+Redmine::API (https://metacpan.org/pod/Redmine::API). Major differences
+between this module and Redmine::API are:
+
+=over
+
+=item *
+
+B<Dependencies>. Redmine::API depends on Moo and REST::Client which in turn depends on
+LWP::UserAgent, URI and possibly others. RedMiner::API uses pure Perl OOP and
+depends directly on LWP::UserAgent and URI.
+
+=item *
+
+B<Call conventions>. Although both modules use dynamic dispatching for building actual HTTP
+requests, they do it in a different manner. In particular, RedMiner::API tries to
+dispatch a single method name without using chains of interrim objects as Redmine::API does.
+	
+=back
 
 =head1 AUTHOR
 
