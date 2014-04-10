@@ -1,17 +1,16 @@
 use strict;
 use warnings;
 
-use Test::More tests => 30;
+use Test::More tests => 29;
 
-BEGIN { use_ok('RedMiner::API') };
+eval 'use RedMiner::API';
 
 #
-# Tests for internal name dispatching
+# Testing internal name dispatching with a dummy object
 #
-
 my $redminer = RedMiner::API->new(
-	host => '',
-	key  => ''
+	host => '', 
+	key  => '',
 );
 
 my $r;

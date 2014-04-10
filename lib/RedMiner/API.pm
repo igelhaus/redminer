@@ -144,6 +144,10 @@ sub _response
 		return $self->_set_error($response->status_line);
 	}
 
+	if ($request->method eq 'PUT' || $request->method eq 'DELETE') {
+		return {};
+	}
+
 	return eval {
 		JSON::XS::decode_json($response->decoded_content)
 	} // $self->_set_error($@);
