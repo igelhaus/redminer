@@ -5,7 +5,6 @@ WriteMakefile(
 	NAME         => 'RedMiner::API',
 	VERSION_FROM => 'lib/RedMiner/API.pm',
 	PREREQ_PM    => {
-		'Encode'          => 0,
 		'URI'             => 0,
 		'URI::QueryParam' => 0,
 		'LWP::UserAgent'  => 0,
