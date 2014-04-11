@@ -9,6 +9,17 @@ from a given layout, but in the future it's aimed for various RedMine automation
 2. `Redminer` module, a Perl binding to [RedMine REST API](http://www.redmine.org/projects/redmine/wiki/Rest_api).
 Please refer to [built-in POD documentation](../master/lib/Redminer.pm) for more details
 
+## Installation
+
+`ExtUtils::MakeMaker` style:
+
+```shell
+$ perl Makefile.PL
+$ make
+$ make test
+$ make install
+```
+
 ## Non-core Dependencies
 
 1. [LWP::UserAgent](https://metacpan.org/pod/LWP::UserAgent)
