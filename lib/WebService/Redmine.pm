@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 
-our $VERSION = '0.04';
+our $VERSION = '0.06';
 
 use URI;
 use URI::QueryParam;
@@ -253,6 +253,8 @@ sub new
 	}
 
 	bless $self, $class;
+
+	return $self;
 }
 
 =head2 error
@@ -265,7 +267,7 @@ be dispatched into an HTTP request), contains description of the client error.
 
 =cut
 
-sub error        { $_[0]->{error} }
+sub error        { return $_[0]->{error} }
 
 =head2 errorDetails
 
@@ -281,7 +283,7 @@ be dispatched into an HTTP request), return value is
 
 =cut
 
-sub errorDetails { $_[0]->{error_details} }
+sub errorDetails { return $_[0]->{error_details} }
 
 sub _set_error   { $_[0]->{error} = $_[1] // ''; return; }
 
@@ -372,7 +374,7 @@ sub _dispatch_name
 	my $name = shift // return $self->_set_client_error('Undefined method name');
 	my @args = @_;
 
-	my ($action, $objects) = ($name =~ /^(get|read|create|update|delete)?([A-Za-z]+?)$/);
+	my ($action, $objects) = ($name =~ /^(get|read|create|update|delete)?([A-Za-z]+?)$/x);
 	
 	if (!$action || $action eq 'read') {
 		$action = 'get';
@@ -411,8 +413,6 @@ sub _dispatch_name
 	}
 
 	$objects = $self->_normalize_objects($objects);
-	delete $self->{expect_single_object};
-
 	my $i = 0;
 	my @objects;
 	while ($objects =~ /([A-Z][a-z]+)/g) {
@@ -423,10 +423,12 @@ sub _dispatch_name
 
 		next if $object eq $category;
 
+		my $is_last_object = pos($objects) == length($objects);
+
 		# We need to attach an object ID to the path if an object is singular and
 		# we either perform anything but creation or we create a new object inside
-		# another object (createProjectMembership)
-		if ($action ne 'create' || pos($objects) != length($objects)) {
+		# another object (e.g. createProjectMembership)
+		if ($action ne 'create' || !$is_last_object) {
 			my $object_id = $args[$i++];
 
 			return $self->_set_client_error(
@@ -436,22 +438,36 @@ sub _dispatch_name
 			push @objects, $object_id;
 		}
 
-		if (pos($objects) == length($objects)) { # Last object in the chain:
-			if ($action eq 'get' || $action eq 'create') {
-				$self->{expect_single_object} = $object;
-			}
-			if (defined $data->{content} && $self->{no_wrapper_object}) {
-				# Automatically wrap object data, otherwise we pass everything as is:
-				$data->{content} = {
-					$object => $data->{content}
-				};
-			}
-		}
+		$self->_dispatch_last_object($action, $object, $data) if $is_last_object;
 	}
 	
 	$data->{path} = join '/', @objects;
 
 	return $data;
+}
+
+sub _dispatch_last_object
+{
+	my $self   = shift;
+	my $action = shift;
+	my $object = shift;
+	my $data   = shift;
+
+	delete $self->{expect_single_object};
+
+	if (length $object) {
+		if ($action eq 'get' || $action eq 'create') {
+			$self->{expect_single_object} = $object;
+		}
+		if ($self->{no_wrapper_object}) {
+			if ($action eq 'create' || $action eq 'update') {
+				# Wrap object data unless we pass everything as is:
+				$data->{content} = { $object => $data->{content} };
+			}
+		}
+	}
+
+	return 1;
 }
 
 sub _normalize_objects
@@ -478,9 +494,9 @@ sub _object
 	my $object = lc(shift);
 	
 	# Process compound words:
-	$object =~ s/timeentr/time_entr/ig;
-	$object =~ s/issue(categor|status)/issue_$1/ig;
-	$object =~ s/customfield/custom_field/ig;
+	$object =~ s/timeentr/time_entr/igx;
+	$object =~ s/issue(categor|status)/issue_$1/igx;
+	$object =~ s/customfield/custom_field/igx;
 	
 	return $object;
 }
