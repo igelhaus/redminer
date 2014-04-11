@@ -6,8 +6,8 @@ Currently the project consists of two parts:
 
 1. `redminer` script itself. For now it supports only creating projects with subprojects
 from a given layout, but in the future it's aimed for various RedMine automation tasks
-2. `Redminer` module, a Perl binding to [RedMine REST API](http://www.redmine.org/projects/redmine/wiki/Rest_api).
-Please refer to [built-in POD documentation](../master/lib/Redminer.pm) for more details
+2. `WebService::Redmine` module, a Perl binding to [RedMine REST API](http://www.redmine.org/projects/redmine/wiki/Rest_api).
+Please refer to [built-in POD documentation](../master/lib/WebService/Redmine.pm) for more details
 
 ## Installation
 

@@ -10,7 +10,7 @@ if ($ENV{REDMINER_DEVEL}) {
 	plan skip_all => 'Development tests (REDMINER_DEVEL not set)';
 }
 
-eval 'use Redminer';
+eval 'use WebService::Redmine';
 
 #
 # Read API key from a simple config file in the format 'host;key'
@@ -29,7 +29,7 @@ my $key_data  = <$FH_key>;
 chomp $key_data;
 close $FH_key;
 
-my $redminer = Redminer->new(
+my $redminer = WebService::Redmine->new(
 	host => $host,
 	key  => $key,
 	no_wrapper_object => 1,
@@ -51,7 +51,7 @@ ok($redminer->updateProject($project_id, { inherit_members => 1 }), 'Project upd
 
 my $issue = $redminer->createIssue({
 	project_id  => $project_id,
-	subject     => 'Test issue for Redminer',
+	subject     => 'Test issue for WebService::Redmine',
 	description => 'Test description',
 });
 ok(defined $issue->{id}, 'Issue created with ID #' . $issue->{id});

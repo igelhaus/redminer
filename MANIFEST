@@ -8,4 +8,4 @@ t/02-realworld.t
 t/03-realworld-no-wrapping.t
 t/04-pod.t
 t/05-pod-coverage.t
-lib/Redminer.pm
+lib/WebService/Redmine.pm

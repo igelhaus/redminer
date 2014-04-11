@@ -3,6 +3,6 @@ use warnings;
 
 use Test::More tests => 1;
 
-BEGIN { use_ok('Redminer') };
+BEGIN { use_ok('WebService::Redmine') };
 
 exit;

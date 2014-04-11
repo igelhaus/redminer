@@ -2,8 +2,8 @@ use 5.010;
 use ExtUtils::MakeMaker;
 
 WriteMakefile(
-	NAME           => 'Redminer',
-	VERSION_FROM   => 'lib/Redminer.pm',
+	NAME           => 'WebService::Redmine',
+	VERSION_FROM   => 'lib/WebService/Redmine.pm',
 	BUILD_REQUIRES => {
 		'ExtUtils::MakeMaker' => 0,
 		'Test::More'          => 0,
@@ -17,7 +17,7 @@ WriteMakefile(
 		'JSON::XS'        => 0,
 	},
 	($] >= 5.005 ? ( ## Add these new keywords supported since 5.005
-		ABSTRACT_FROM => 'lib/Redminer.pm',
+		ABSTRACT_FROM => 'lib/WebService/Redmine.pm',
 		AUTHOR        => 'Anton Soldatov <igelhaus@gmail.com>')
 	: ()),
 );

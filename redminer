@@ -11,7 +11,7 @@ use Encode qw/encode/;
 use Getopt::Long;
 use Config::IniFiles;
 
-use Redminer;
+use WebService::Redmine;
 
 my $conf_fname   = $ENV{HOME} . '/.redminer/redminer.conf';
 my $layout_fname = $ENV{HOME} . '/.redminer/default-layout.conf';
@@ -44,7 +44,7 @@ if (!$layout) {
 	warn 'Unable to access layout config';
 }
 
-my $redminer = Redminer->new(
+my $redminer = WebService::Redmine->new(
 	host              => $conf->val('redmine', 'host') // '',
 	user              => $conf->val('redmine', 'user') // '',
 	pass              => $conf->val('redmine', 'pass') // '',
