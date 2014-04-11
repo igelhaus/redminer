@@ -3,6 +3,6 @@ use warnings;
 
 use Test::More tests => 1;
 
-BEGIN { use_ok('RedMiner::API') };
+BEGIN { use_ok('Redminer') };
 
 exit;

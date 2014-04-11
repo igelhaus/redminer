@@ -1,4 +1,4 @@
-package RedMiner::API;
+package Redminer;
 
 use 5.010;
 use strict;
@@ -18,17 +18,17 @@ use Encode   qw/decode/;
 
 =head1 NAME
 
-RedMiner::API - Wrapper for RedMine REST API (http://www.redmine.org/projects/redmine/wiki/Rest_api).
+Redminer - Wrapper for RedMine REST API (http://www.redmine.org/projects/redmine/wiki/Rest_api).
 
 =head1 SYNOPSIS
 
-	use RedMiner::API;
-	my $redminer = RedMiner::API->new(
+	use Redminer;
+	my $redminer = Redminer->new(
 		host => 'example.com/redmine',
 		key  => 'xxx',
 	);
 	# password-based auth is also supported:
-	#my $redminer = RedMiner::API->new(
+	#my $redminer = Redminer->new(
 	#	host => 'example.com/redmine',
 	#	user => 'redminer',
 	#	pass => 'p@s$w0rD',
@@ -37,7 +37,7 @@ RedMiner::API - Wrapper for RedMine REST API (http://www.redmine.org/projects/re
 	my $project = $redminer->createProject({
 		identifier  => 'my-project',
 		name        => 'My Project',
-		description => 'My project, created with *RedMiner::API*',
+		description => 'My project, created with *Redminer*',
 	});
 	if (!$project) {
 		say STDERR 'Error(s) creating project: ', join("\n", map { $_ } $redminer->errorDetails->{errors});
@@ -52,7 +52,7 @@ RedMiner::API - Wrapper for RedMine REST API (http://www.redmine.org/projects/re
 	
 	my $issue = $redminer->createIssue({
 		project_id  => $project_id,
-		subject     => 'Test issue for RedMiner::API',
+		subject     => 'Test issue for Redminer',
 		description => 'Issue description',
 	});
 
@@ -145,7 +145,7 @@ be retrieved like this:
 
 =head2 new
 
-	my $redminer = RedMiner::API->new(%options);
+	my $redminer = Redminer->new(%options);
 
 Following options are recognized:
 
@@ -188,7 +188,7 @@ By default RedMine API requires you to wrap you object data like this:
 
 By default this module follows this convention. However, if you specify something like
 
-	my $redminer = RedMiner::API->new(
+	my $redminer = Redminer->new(
 		host => 'example.com/redmine',
 		key => 'xxx',
 		no_wrapper_object => 1,
@@ -510,13 +510,13 @@ between this module and Redmine::API are:
 =item *
 
 B<Dependencies>. Redmine::API depends on Moo and REST::Client which in turn depends on
-LWP::UserAgent, URI and possibly others. RedMiner::API uses pure Perl OOP and
+LWP::UserAgent, URI and possibly others. Redminer uses pure Perl OOP and
 depends directly on LWP::UserAgent and URI.
 
 =item *
 
 B<Call conventions>. Although both modules use dynamic dispatching for building actual HTTP
-requests, they do it in a different manner. In particular, RedMiner::API tries to
+requests, they do it in a different manner. In particular, Redminer tries to
 dispatch a single method name without using chains of interrim objects as Redmine::API does.
 
 =back

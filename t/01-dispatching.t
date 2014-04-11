@@ -3,12 +3,12 @@ use warnings;
 
 use Test::More tests => 29;
 
-eval 'use RedMiner::API';
+eval 'use Redminer';
 
 #
 # Testing internal name dispatching with a dummy object
 #
-my $redminer = RedMiner::API->new(
+my $redminer = Redminer->new(
 	host => '', 
 	key  => '',
 );

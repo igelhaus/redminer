@@ -2,8 +2,8 @@ use 5.010;
 use ExtUtils::MakeMaker;
 
 WriteMakefile(
-	NAME         => 'RedMiner::API',
-	VERSION_FROM => 'lib/RedMiner/API.pm',
+	NAME         => 'Redminer',
+	VERSION_FROM => 'lib/Redminer.pm',
 	PREREQ_PM    => {
 		'URI'             => 0,
 		'URI::QueryParam' => 0,
@@ -11,7 +11,7 @@ WriteMakefile(
 		'JSON::XS'        => 0,
 	},
 	($] >= 5.005 ? ( ## Add these new keywords supported since 5.005
-		ABSTRACT_FROM => 'lib/RedMiner/API.pm',
+		ABSTRACT_FROM => 'lib/Redminer.pm',
 		AUTHOR        => 'Anton Soldatov <igelhaus@gmail.com>')
 	: ()),
 );

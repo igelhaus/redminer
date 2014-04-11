@@ -4,13 +4,13 @@ use warnings;
 use Test::More;
 use JSON::XS qw/encode_json/;
 
-if ($ENV{REDMINER_API_DEVEL}) {
-    plan tests => 5;
+if ($ENV{REDMINER_DEVEL}) {
+	plan tests => 5;
 } else{
-	plan skip_all => 'Development tests (REDMINER_API_DEVEL not set)';
+	plan skip_all => 'Development tests (REDMINER_DEVEL not set)';
 }
 
-eval 'use RedMiner::API';
+eval 'use Redminer';
 
 #
 # Read API key from a simple config file in the format 'host;key'
@@ -20,7 +20,7 @@ my $key  = '';
 my $key_fname = $ENV{HOME} . '/.redminer/key';
 
 if (!-e $key_fname) {
-	BAIL_OUT('REDMINER_API_DEVEL set, but key file is not accessible');
+	BAIL_OUT('REDMINER_DEVEL set, but key file is not accessible');
 }
 
 open my $FH_key, '<', $key_fname;
@@ -29,7 +29,7 @@ my $key_data  = <$FH_key>;
 chomp $key_data;
 close $FH_key;
 
-my $redminer = RedMiner::API->new(
+my $redminer = Redminer->new(
 	host => $host,
 	key  => $key,
 );
@@ -50,7 +50,7 @@ ok($redminer->updateProject($project_id, { project => { inherit_members => 1 } }
 
 my $issue = $redminer->createIssue({ issue => {
 	project_id  => $project_id,
-	subject     => 'Test issue for RedMiner::API',
+	subject     => 'Test issue for Redminer',
 	description => 'Test description',
 }});
 ok(defined $issue->{issue}{id}, 'Issue created with ID #' . $issue->{issue}{id});

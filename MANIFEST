@@ -1,6 +1,11 @@
 Changes
 Makefile.PL
 MANIFEST
-README
-t/RedMiner-API.t
-lib/RedMiner/API.pm
+README.md
+t/00-use.t
+t/01-dispatching.t
+t/02-realworld.t
+t/03-realworld-no-wrapping.t
+t/04-pod.t
+t/05-pod-coverage.t
+lib/Redminer.pm
