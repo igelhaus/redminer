@@ -2,9 +2,15 @@ use 5.010;
 use ExtUtils::MakeMaker;
 
 WriteMakefile(
-	NAME         => 'Redminer',
-	VERSION_FROM => 'lib/Redminer.pm',
-	PREREQ_PM    => {
+	NAME           => 'Redminer',
+	VERSION_FROM   => 'lib/Redminer.pm',
+	BUILD_REQUIRES => {
+		'ExtUtils::MakeMaker' => 0,
+		'Test::More'          => 0,
+		'Test::Pod'           => '1.00',
+		'Test::Pod::Coverage' => 0,
+	},
+	PREREQ_PM => {
 		'URI'             => 0,
 		'URI::QueryParam' => 0,
 		'LWP::UserAgent'  => 0,
