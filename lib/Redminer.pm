@@ -34,33 +34,33 @@ Redminer - Wrapper for RedMine REST API (http://www.redmine.org/projects/redmine
 	#	pass => 'p@s$w0rD',
 	#);
 
-	my $project = $redminer->createProject({
+	my $project = $redminer->createProject({ project => {
 		identifier  => 'my-project',
 		name        => 'My Project',
 		description => 'My project, created with *Redminer*',
-	});
+	}});
 	if (!$project) {
-		say STDERR 'Error(s) creating project: ', join("\n", map { $_ } $redminer->errorDetails->{errors});
+		say STDERR 'Error(s) creating project: ', join("\n", map { $_ } @{ $redminer->errorDetails->{errors} });
 		exit 1;
 	}
 	my $project_id = $project->{project}{id};
 
-	$redminer->updateProject($project_id, {
+	$redminer->updateProject($project_id, { project => {
 		parent_id       => 42, # Make a project with numeric ID 42  parent for $project_id
 		inherit_members => 1,  # Inherit all members and their permissions from the parent
-	});
+	}});
 	
-	my $issue = $redminer->createIssue({
+	my $issue = $redminer->createIssue({ issue => {
 		project_id  => $project_id,
 		subject     => 'Test issue for Redminer',
 		description => 'Issue description',
-	});
+	}});
 
 	$redminer->deleteProject($project_id);
 
 =head1 DESCRIPTION
 
-This module provides a thin client for RedMine REST API. Please note that although
+This module is a client for RedMine REST API. Please note that although
 RedMine API is designed to support both JSON and XML, this module is B<JSON only>.
 
 =head1 METHODS NAMING AND OTHER CALL CONVENTIONS
@@ -85,7 +85,7 @@ All methods are dynamically converted to actual HTTP requests using following co
 	$redminer->getProject(1);  # ->getUser(1),   ->getIssue(1),  ->getTimeEntry(1)  ...
 	$redminer->readProject(1); # ->readUsers(1), ->readIssue(1), ->readTimeEntry(1) ...
 	
-	# Showing anobject with additional metadata:
+	# Showing an object with additional metadata:
 	$redminer->issue(1, { include => 'relations,changesets' });
 
 =head2 Creating an Object
@@ -125,7 +125,7 @@ All methods are dynamically converted to actual HTTP requests using following co
 =head2 Complex Object Names
 
 Such complex names as C<TimeEntry> which should be dispatched to C<time_entries>
-are recognized and thus can be spelled in a natural language way (see examples above).
+are recognized and thus can be spelled in CamelCase (see examples above).
 If this is not the case, please report bugs.
 
 =head2 Return Values
@@ -134,7 +134,7 @@ All successfull calls return hash references. For C<update*> and C<delete*> call
 hash references are empty.
 
 If a call fails, C<undef> is returned. In this case detailed error information can
-be retrieved like this:
+be retrieved using C<errorDetails> method:
 	
 	if (!$redminer->deleteIssue(42)) {
 		my $details = $redminer->errorDetails;
@@ -175,7 +175,7 @@ B<no_wrapper_object>: Automatically add/remove wrapper object for data. See belo
 
 =head3 no_wrapper_object
 
-By default RedMine API requires you to wrap you object data like this:
+By default RedMine API requires you to wrap you object data:
 
 	my $project = $redminer->createProject({
 		project => {
@@ -186,7 +186,8 @@ By default RedMine API requires you to wrap you object data like this:
 	# $project contains something like
 	# { project => { id => 42, identifier => 'some-id', name => 'Some Name' ... } }
 
-By default this module follows this convention. However, if you specify something like
+By default this module follows this convention. However, if you turn on
+the C<no_wrapper_object> flag
 
 	my $redminer = Redminer->new(
 		host => 'example.com/redmine',
@@ -194,7 +195,7 @@ By default this module follows this convention. However, if you specify somethin
 		no_wrapper_object => 1,
 	);
 
-you can skip "wrapping" object data like this:
+you can skip "wrapping" object data, which results in simpler data structures:
 
 	my $project = $redminer->createProject({
 		identifier => 'some-id',
@@ -202,6 +203,11 @@ you can skip "wrapping" object data like this:
 	});
 	# $project contains something like
 	# { id => 42, identifier => 'some-id', name => 'Some Name' ... }
+
+Please note that wrapping can be skipped only while operating on single objects,
+i.e. this flag is honored for C<create*> and C<update*> requests as well as for
+C<get>ting individual objects. This flag is ignored for C<delete*> calls and calls
+like C<issues>.
 
 =cut
 
