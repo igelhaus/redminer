@@ -5,7 +5,6 @@ WriteMakefile(
 	NAME           => 'WebService::Redmine',
 	VERSION_FROM   => 'lib/WebService/Redmine.pm',
 	BUILD_REQUIRES => {
-		'ExtUtils::MakeMaker' => 0,
 		'Test::More'          => 0,
 		'Test::Pod'           => '1.00',
 		'Test::Pod::Coverage' => 0,
