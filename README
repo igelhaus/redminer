@@ -1,0 +1,14 @@
+WebService::Redmine
+
+This is a Perl binding to Redmine REST API (http://www.redmine.org/projects/redmine/wiki/Rest_api).
+
+This is the part of the redminer project (https://github.com/igelhaus/redminer).
+
+For more details, please see README.md file or POD documentation shipped with the module.
+
+INSTALLATION
+
+$ perl Makefile.PL
+$ make
+$ make test
+$ make install
