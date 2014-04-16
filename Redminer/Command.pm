@@ -6,6 +6,10 @@ use Data::Dumper;
 use Getopt::Long;
 use Encode qw/encode_utf8/;
 
+use constant {
+	OBJECT_PER_ITERATION => 30,
+};
+
 has engine => (
 	is       => 'ro',
 	isa      => 'WebService::Redmine',
@@ -70,6 +74,41 @@ sub run
 	}
 
 	return $rv;
+}
+
+#
+# Common routine for iterating over collections of objects
+#
+sub iterate
+{
+	my $self   = shift;
+	my $what   = shift;
+	my $cb     = shift;
+	my $filter = shift // {};
+
+	return ref $cb ne 'CODE';
+
+	my $num_objects;
+	
+	$filter->{offset} = 0;
+	$filter->{limit}  = OBJECT_PER_ITERATION;
+
+	do {
+		my $objects = $self->engine->$what($filter);
+		last if !$objects;
+
+		if (!defined $num_objects) {
+			$num_objects = $objects->{total_count};
+		}
+
+		foreach my $object (@{ $objects->{$what} }) {
+			&{$cb}($object);
+		}
+
+		$filter->{offset} += OBJECT_PER_ITERATION;
+	} while ($filter->{offset} < $num_objects);
+
+	return 1;
 }
 
 #

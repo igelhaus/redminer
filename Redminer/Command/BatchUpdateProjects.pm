@@ -4,10 +4,6 @@ use 5.010;
 use strict;
 use warnings;
 
-use constant {
-	PROJECTS_PER_CALL => 30,
-};
-
 sub _args_spec { [ 'filter=s@', 'opt=s%' ] }
 
 sub _run
@@ -25,37 +21,23 @@ sub _run
 		return;
 	}
 
-	my $num_projects;
-	my $pagination = {
-		offset => 0,
-		limit  => PROJECTS_PER_CALL,
-	};
+	$self->iterate('projects', sub {
+		my $project = shift;
+		return if !$self->_passes_filter($project);
 
-	do {
-		my $projects = $self->engine->projects($pagination);
-		last if !$projects;
-
-		if (!defined $num_projects) {
-			$num_projects = $projects->{total_count};
+		$self->log(sprintf 'Trying to update project \'%s\' (internal ID %d)...',
+			Encode::encode_utf8($project->{name}),
+			$project->{id},
+		);
+		if ($self->engine->updateProject($project->{id}, $self->args->{opt})) {
+			$self->log('Updated OK');
+			return 1;
 		}
 
-		foreach my $project (@{ $projects->{projects} }) {
-			next if !$self->_passes_filter($project);
-			$self->log(sprintf 'Trying to update project \'%s\' (internal ID %d)...',
-				Encode::encode_utf8($project->{name}),
-				$project->{id},
-			);
-			if ($self->engine->updateProject($project->{id}, $self->args->{opt})) {
-				$self->log('Updated OK');
-			} else {
-				$self->log('Project was not updated');
-				$self->_log_engine_errors;
-				next;
-			}
-		}
-
-		$pagination->{offset} += PROJECTS_PER_CALL;
-	} while ($pagination->{offset} < $num_projects);
+		$self->log('Project was not updated');
+		$self->_log_engine_errors;
+		return 1;
+	});
 	
 	return 1;
 }
