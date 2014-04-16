@@ -4,7 +4,7 @@ use 5.010;
 use Mouse;
 use Data::Dumper;
 use Getopt::Long;
-use Encode qw/encode_utf8/;
+use Encode qw/encode_utf8 decode_utf8/;
 
 use constant {
 	OBJECT_PER_ITERATION => 30,
@@ -106,10 +106,14 @@ sub iterate
 		}
 
 		$filter->{offset} += OBJECT_PER_ITERATION;
-	} while ($filter->{offset} < $num_objects);
+	} while (defined $num_objects && $filter->{offset} < $num_objects);
 
 	return 1;
 }
+
+#
+# Filtering an object by its properties using regexes or plain "eq"
+#
 
 sub filter
 {
@@ -117,17 +121,17 @@ sub filter
 	my $filter_name = shift // return;
 	my $object      = shift // return;
 	my $prop_spec   = shift // return;
-	
-	my $filters = $self->args->{$filter_name} // return;
+	my $filters     = $self->args->{$filter_name} // return;
 
 	foreach my $filter (@$filters) {
 		if ($prop_spec->{regex} && $filter =~ m|^/(.+)/$|) {
-			my $re_filter = $1;
+			my $re_filter = Encode::decode_utf8($1);
 			foreach my $prop (@{ $prop_spec->{regex} }) {
-				return 1 if $object->{$prop} && $object->{$prop} =~ /$1/i;
+				return 1 if $object->{$prop} && $object->{$prop} =~ /$re_filter/i;
 			}
-		} elsif ($prop_spec->{plain}) {
-			my @values = split /,/, $filter;
+		}
+		if ($prop_spec->{plain}) {
+			my @values = map { Encode::decode_utf8($_) } split /,/, $filter;
 			foreach my $value (@values) {
 				foreach my $prop (@{ $prop_spec->{plain} }) {
 					return 1 if $object->{$prop} && "$object->{$prop}" eq $value;
