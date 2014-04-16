@@ -34,7 +34,8 @@ sub _run
 
 	$config->newval('redmine', 'work_as', $self->args->{work_as}) if length $self->args->{work_as};
 
-	my $redmine_config = $ENV{HOME} . '/.redminer/redminer.conf';
+	my $config_dir     = $ENV{HOME} . '/.redminer';
+	my $redmine_config = "$config_dir/redminer.conf";
 
 	if (-e -f $redmine_config) {
 		my $redmine_config_bak = $redmine_config . '.old';
@@ -43,6 +44,8 @@ sub _run
 		File::Copy::move($redmine_config, $redmine_config_bak);
 	}
 
+	mkdir $config_dir if !-e -d $config_dir;
+	
 	$self->log("Writing config to '$redmine_config'");
 	$config->SetFileName($redmine_config);
 	$config->WriteConfig($redmine_config);
