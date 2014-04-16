@@ -2,7 +2,9 @@ package Redminer::Command;
 
 use 5.010;
 use Mouse;
+use Data::Dumper;
 use Getopt::Long;
+use Encode qw/encode_utf8/;
 
 has engine => (
 	is       => 'ro',
@@ -43,15 +45,57 @@ sub _args
 	my $self = shift;
 	my %args;
 
-	GetOptions(\%args, @{ $self->_args_spec });
+	if ($self->can('_args_spec')) {
+		Getopt::Long::GetOptions(\%args, @{ $self->_args_spec });
+	}
 
-	my $defaults = $self->_args_defaults;
-	foreach my $arg (keys %$defaults) {
-		next if defined $args{$arg} || !defined $defaults->{$arg};
-		$args{$arg} = $defaults->{$arg};
+	if ($self->can('_args_defaults')) {
+		my $defaults = $self->_args_defaults;
+		foreach my $arg (keys %$defaults) {
+			next if defined $args{$arg} || !defined $defaults->{$arg};
+			$args{$arg} = $defaults->{$arg};
+		}
 	}
 
 	return \%args;
+}
+
+sub run
+{
+	my $self = shift;
+	my $rv   = $self->_run;
+
+	if (!$rv) {
+		$self->_log_engine_errors;
+	}
+
+	return $rv;
+}
+
+#
+# Logging and error handling
+#
+
+sub log
+{
+	my $self    = shift;
+	my $message = join("\n", map { ref($_)? Data::Dumper::Dumper($_) : $_ } @_);
+	say $message;
+	return 1;
+}
+
+sub _log_engine_errors
+{
+	my $self   = shift;
+	my $errors = $self->engine->errorDetails;
+
+	if (ref $errors ne 'HASH' || ref $errors->{errors} ne 'ARRAY') {
+		return;
+	}
+	
+	return $self->log('Following error(s) reported: ',
+		map { sprintf "\t* %s", Encode::encode_utf8($_) } @{ $errors->{errors} }
+	);
 }
 
 1;
