@@ -8,7 +8,7 @@ use constant {
 	PROJECTS_PER_CALL => 30,
 };
 
-sub _args_spec { [ 'filter=s@', 'opt=s@' ] }
+sub _args_spec { [ 'filter=s@', 'opt=s%' ] }
 
 sub _run
 {
@@ -19,13 +19,11 @@ sub _run
 		return;
 	}
 
-	if (!exists $self->args->{opt} || @{ $self->args->{opt} } == 0) {
+	if (!exists $self->args->{opt} || keys %{ $self->args->{opt} } == 0) {
 		$self->log('--opt not found');
-		$self->log('Expected: --opt key1:value1 --opt key2:value2 ...');
+		$self->log('Expected: --opt key1=value1 --opt key2=value2 ...');
 		return;
 	}
-
-	my %options = map { /^([^:]+):([^:]+)$/; ($1 => $2) } @{ $self->args->{opt} };
 
 	my $num_projects;
 	my $pagination = {
@@ -47,7 +45,7 @@ sub _run
 				Encode::encode_utf8($project->{name}),
 				$project->{id},
 			);
-			if ($self->engine->updateProject($project->{id}, \%options)) {
+			if ($self->engine->updateProject($project->{id}, $self->args->{opt})) {
 				$self->log('Updated OK');
 			} else {
 				$self->log('Project was not updated');
