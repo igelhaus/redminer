@@ -86,7 +86,7 @@ sub iterate
 	my $cb     = shift;
 	my $filter = shift // {};
 
-	return ref $cb ne 'CODE';
+	return if ref $cb ne 'CODE';
 
 	my $num_objects;
 	
@@ -109,6 +109,34 @@ sub iterate
 	} while ($filter->{offset} < $num_objects);
 
 	return 1;
+}
+
+sub filter
+{
+	my $self        = shift;
+	my $filter_name = shift // return;
+	my $object      = shift // return;
+	my $prop_spec   = shift // return;
+	
+	my $filters = $self->args->{$filter_name} // return;
+
+	foreach my $filter (@$filters) {
+		if ($prop_spec->{regex} && $filter =~ m|^/(.+)/$|) {
+			my $re_filter = $1;
+			foreach my $prop (@{ $prop_spec->{regex} }) {
+				return 1 if $object->{$prop} && $object->{$prop} =~ /$1/i;
+			}
+		} elsif ($prop_spec->{plain}) {
+			my @values = split /,/, $filter;
+			foreach my $value (@values) {
+				foreach my $prop (@{ $prop_spec->{plain} }) {
+					return 1 if $object->{$prop} && "$object->{$prop}" eq $value;
+				}
+			}
+		}
+	}
+
+	return;
 }
 
 #

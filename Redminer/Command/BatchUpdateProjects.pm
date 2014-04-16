@@ -23,7 +23,10 @@ sub _run
 
 	$self->iterate('projects', sub {
 		my $project = shift;
-		return if !$self->_passes_filter($project);
+		return if !$self->filter('filter', $project, {
+			regex => [qw/identifier name/],
+			plain => [qw/identifier id/],
+		});
 
 		$self->log(sprintf 'Trying to update project \'%s\' (internal ID %d)...',
 			Encode::encode_utf8($project->{name}),
@@ -40,32 +43,6 @@ sub _run
 	});
 	
 	return 1;
-}
-
-sub _passes_filter
-{
-	my $self    = shift;
-	my $project = shift;
-	my $filters = $self->args->{filter};
-
-	foreach my $filter (@$filters) {
-		if ($filter =~ m|^/(.+)/$|) {
-			return 1 if
-				$project->{identifier} =~ /$1/ ||
-				$project->{name}       =~ /$1/i
-			;
-		} else {
-			my @values = split /,/, $filter;
-			foreach my $value (@values) {
-				return 1 if 
-					$project->{identifier} eq $value ||
-					"$project->{id}" eq $value
-				;
-			}
-		}
-	}
-
-	return 0;
 }
 
 1;
