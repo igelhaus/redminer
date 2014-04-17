@@ -25,7 +25,7 @@ sub _run
 
 		$self->iterate('projectMemberships', sub {
 			my $membership = shift;
-			
+
 			if (exists $membership->{group}) {
 				my ($group) = grep { $_->{id} == $membership->{group}{id} } @$groups;
 				if ($group) {
@@ -33,7 +33,7 @@ sub _run
 						Encode::encode_utf8($group->{name}),
 						$group->{id},
 					);
-					$self->engine->_revoke($membership);
+					$self->_revoke($membership);
 				}
 				return 1;
 			}
@@ -46,7 +46,7 @@ sub _run
 						Encode::encode_utf8($user->{lastname}),
 						$user->{id},
 					);
-					$self->engine->_revoke($membership);
+					$self->_revoke($membership);
 				}
 				return 1;
 			}
