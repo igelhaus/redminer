@@ -40,6 +40,7 @@ sub _run
 	}
 
 	my $description = $layout? $layout->val('project', 'description') // '' : '';
+	my $is_public   = $layout? $layout->val('project',   'is_public') //  0 : '';
 
 	$self->log('Creating a new project ' . $project_name);
 
@@ -56,7 +57,10 @@ sub _run
 
 	my $pid = $project->{id};
 	$self->log('Project created with ID ' . $pid);
-	$self->engine->updateProject($pid, { inherit_members => 1 });
+	$self->engine->updateProject($pid, {
+		inherit_members => 1,
+		is_public       => $is_public,
+	});
 
 	if ($layout) {
 		my @sections = $layout->Sections;
@@ -81,6 +85,7 @@ sub _run
 			$self->engine->updateProject($subproject->{id}, {
 				parent_id       => $pid,
 				inherit_members => 1,
+				is_public       => $is_public,
 			});
 		}
 	}
