@@ -2,12 +2,23 @@
 
 Automating [Redmine](http://www.redmine.org) with Perl 5.10+.
 
-For now `redminer` script supports only creating projects with subprojects
-from a given layout, but in the future it's aimed for various Redmine automation tasks.
-
 ## Installation
 
 2DO
+
+## Usage
+
+```shell
+$ perl redminer.pl command [options]
+```
+
+### Supported Commands
+
+* `setup`
+* `create-project`
+* `batch-update-project`
+* `delete-project`
+* `batch-grant`
 
 ## Non-core Dependencies
 
