@@ -19,6 +19,11 @@ $ perl redminer.pl command [options]
 * `batch-update-project`
 * `delete-project`
 * `batch-grant`
+* `batch-revoke`
+
+### Command Options
+
+2DO
 
 ## Non-core Dependencies
 

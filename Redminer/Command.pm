@@ -146,7 +146,7 @@ sub filter
 	return;
 }
 
-# Process --project + --group + --usert filters at once.
+# Process --project + --group + --user filters at once.
 # Currently needed by batch-grant and batch-revoke
 sub permissionFilter
 {
