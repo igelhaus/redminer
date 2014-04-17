@@ -28,47 +28,19 @@ sub _run
 		return;
 	}
 
-	my @projects;
-	$self->iterate('projects', sub {
-		my $project = shift;
-		return if !$self->filter('project', $project, {
-			regex => [qw/identifier name/],
-			plain => [qw/identifier id/],
-		});
-		push @projects, $project;
-	});
+	my ($projects, $groups, $users) = $self->permissionFilter;
 
-	my @groups;
-	$self->iterate('groups', sub {
-		my $group = shift;
-		return if !$self->filter('group', $group, {
-			regex => [qw/name/],
-			plain => [qw/name id/],
-		});
-		push @groups, $group;
-	});
-
-	my @users;
-	$self->iterate('users', sub {
-		my $user = shift;
-		return if !$self->filter('user', $user, {
-			regex => [qw/login firstname lastname/],
-			plain => [qw/login firstname lastname id/],
-		});
-		push @users, $user;
-	});
-
-	if (@groups == 0 && @users == 0) {
+	if (@$groups == 0 && @$users == 0) {
 		$self->log('Neither --group nor --user filters matched');
 		return;
 	}
 
-	foreach my $project (@projects) {
+	foreach my $project (@$projects) {
 		$self->log(sprintf 'Processing project \'%s\' (internal ID %d)...',
 			Encode::encode_utf8($project->{name}),
 			$project->{id},
 		);
-		foreach my $group (@groups) {
+		foreach my $group (@$groups) {
 			$self->log(sprintf "\tGranting to group '%s' (internal ID %d)",
 				Encode::encode_utf8($group->{name}),
 				$group->{id},
@@ -78,7 +50,7 @@ sub _run
 				role_ids => \@role_ids,
 			});
 		}
-		foreach my $user (@users) {
+		foreach my $user (@$users) {
 			$self->log(sprintf "\tGranting to user '%s %s' (internal ID %d)",
 				Encode::encode_utf8($user->{firstname}),
 				Encode::encode_utf8($user->{lastname}),

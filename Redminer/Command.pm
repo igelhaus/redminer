@@ -146,6 +146,45 @@ sub filter
 	return;
 }
 
+# Process --project + --group + --usert filters at once.
+# Currently needed by batch-grant and batch-revoke
+sub permissionFilter
+{
+	my $self = shift;
+
+	my @projects;
+	$self->iterate('projects', sub {
+		my $project = shift;
+		return if !$self->filter('project', $project, {
+			regex => [qw/identifier name/],
+			plain => [qw/identifier id/],
+		});
+		push @projects, $project;
+	});
+
+	my @groups;
+	$self->iterate('groups', sub {
+		my $group = shift;
+		return if !$self->filter('group', $group, {
+			regex => [qw/name/],
+			plain => [qw/name id/],
+		});
+		push @groups, $group;
+	});
+
+	my @users;
+	$self->iterate('users', sub {
+		my $user = shift;
+		return if !$self->filter('user', $user, {
+			regex => [qw/login firstname lastname/],
+			plain => [qw/login firstname lastname id/],
+		});
+		push @users, $user;
+	});
+
+	return (\@projects, \@groups, \@users);
+}
+
 #
 # Logging and error handling
 #
