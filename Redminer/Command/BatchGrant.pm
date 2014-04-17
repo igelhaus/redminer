@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 
-sub _args_spec { [ 'project=s@', 'user=s@', 'group=s@', 'role=s@', ] }
+sub _args_spec { [ 'project=s@', 'user=s@', 'group=s@', 'role=s@', 'dry-run', ] }
 
 sub _run
 {
@@ -38,7 +38,6 @@ sub _run
 		push @projects, $project;
 	});
 
-	# FIXME: fetch groups
 	my @groups;
 	$self->iterate('groups', sub {
 		my $group = shift;
@@ -60,7 +59,7 @@ sub _run
 	});
 
 	if (@groups == 0 && @users == 0) {
-		$self->log('Neither --group nor --user filters specified');
+		$self->log('Neither --group nor --user filters matched');
 		return;
 	}
 
@@ -74,7 +73,7 @@ sub _run
 				Encode::encode_utf8($group->{name}),
 				$group->{id},
 			);
-			$self->engine->createProjectMembership($project->{id}, {
+			$self->_grant($project->{id}, {
 				user_id  => $group->{id},
 				role_ids => \@role_ids,
 			});
@@ -85,12 +84,30 @@ sub _run
 				Encode::encode_utf8($user->{lastname}),
 				$user->{id},
 			);
-			$self->engine->createProjectMembership($project->{id}, {
+			$self->_grant($project->{id}, {
 				user_id  => $user->{id},
 				role_ids => \@role_ids,
 			});
 		}
 		$self->log('Project processed');
+	}
+
+	return 1;
+}
+
+sub _grant
+{
+	my $self       = shift;
+	
+	return 1 if $self->args->{'dry-run'};
+
+	my $pid        = shift;
+	my $membership = shift;
+
+	if (!$self->engine->createProjectMembership($pid, $membership)) {
+		$self->log('Warning: not granted');
+		$self->_log_engine_errors;
+		return;
 	}
 
 	return 1;
