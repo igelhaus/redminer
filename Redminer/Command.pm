@@ -89,12 +89,15 @@ sub iterate
 	return if ref $cb ne 'CODE';
 
 	my $num_objects;
-	
+	my $object_id     = delete $filter->{_id};
 	$filter->{offset} = 0;
 	$filter->{limit}  = OBJECT_PER_ITERATION;
 
 	do {
-		my $objects = $self->engine->$what($filter);
+		my $objects = defined $object_id
+			? $self->engine->$what($object_id, $filter)
+			: $self->engine->$what($filter)
+		;
 		last if !$objects;
 
 		if (!defined $num_objects) {

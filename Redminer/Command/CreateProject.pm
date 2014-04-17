@@ -88,25 +88,24 @@ sub _run
 	my $perm_source = $layout? $layout->val('project', 'perm_source') : 0;
 	return 1 if !$perm_source;
 
-	my $memberships = $self->engine->projectMemberships($perm_source);
-	return 1 if !$memberships;
-
-	# FIXME: handle limit/offset issue
 	my $membership_source = $self->engine->project($perm_source);
+	return 1 if !$membership_source;
 
 	$self->log(sprintf
 		'Copying project permissions from a template project \'%s\' (internal ID %d)...',
 		Encode::encode_utf8($membership_source->{name}),
 		$membership_source->{id},
 	);
-	foreach my $membership (@{ $memberships->{memberships} }) {
+
+	$self->iterate('projectMemberships', sub {
+		my $membership = shift;
 		my $type = '';
 		if (exists $membership->{group}) {
 			$type = 'group';
 		} elsif (exists $membership->{user}) {
 			$type = 'user';
 		}
-		next if !length $type;
+		return if !length $type;
 
 		my $new_membership = {
 			user_id  => $membership->{$type}{id},
@@ -120,7 +119,7 @@ sub _run
 		if ($new_membership->{user_id} && @{ $new_membership->{role_ids} }) {
 			$self->engine->createProjectMembership($pid, $new_membership);
 		}
-	}
+	}, { _id => $perm_source });
 
 	$self->log('Permissions copied');
 	return 1;
