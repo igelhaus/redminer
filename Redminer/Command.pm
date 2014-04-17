@@ -93,6 +93,9 @@ sub iterate
 	$filter->{offset} = 0;
 	$filter->{limit}  = OBJECT_PER_ITERATION;
 
+	my $collection = $what;
+	$collection    = lcfirst $1 if $collection =~ /([A-Z][a-z]+)$/;
+	
 	do {
 		my $objects = defined $object_id
 			? $self->engine->$what($object_id, $filter)
@@ -104,7 +107,7 @@ sub iterate
 			$num_objects = $objects->{total_count};
 		}
 
-		foreach my $object (@{ $objects->{$what} }) {
+		foreach my $object (@{ $objects->{$collection} }) {
 			&{$cb}($object);
 		}
 
