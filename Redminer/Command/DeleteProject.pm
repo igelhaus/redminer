@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 
-sub _args_spec { [ 'id=s' ] }
+sub _args_spec { [ 'id=s', 'dry-run', ] }
 
 sub _run
 {
@@ -26,6 +26,8 @@ sub _run
 		Encode::encode_utf8($project->{name}),
 		$project->{id},
 	);
+
+	return 1 if $self->args->{'dry-run'};
 
 	if ($self->engine->deleteProject($self->args->{id})) {
 		$self->log('Project deleted');

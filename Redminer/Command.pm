@@ -101,7 +101,7 @@ sub iterate
 			? $self->engine->$what($object_id, $filter)
 			: $self->engine->$what($filter)
 		;
-		last if !$objects;
+		return 1 if !$objects;
 
 		if (!defined $num_objects) {
 			$num_objects = $objects->{total_count};
